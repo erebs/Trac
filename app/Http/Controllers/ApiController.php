@@ -30,7 +30,7 @@ class ApiController extends Controller
 
         // Check if any of the required fields are empty!
         if (!$isField) {
-            echo "Some fields are required!";
+            echo "Some fields are required!!!";
             return;
         }
         if (strlen($pincode) != 6) {
