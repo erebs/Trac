@@ -16,7 +16,7 @@ class CreateImagesTable extends Migration
         Schema::create('images', function (Blueprint $table) {
             $table->increments('id');
             $table->string('photo',256)->default('');
-            $table->string('type',['Profile_photo','others'])->default('');
+            $table->enum('type',['Profile_photo','others'])->default('Profile_photo');
             $table->timestamps();
         });
     }
