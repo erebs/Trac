@@ -90,9 +90,8 @@ class ApiController extends Controller
         }
 
         // Fetching User data from Database
-        $user = User::where('mobile_number', $username)->get();
-
-
+        $user = User::where('mobile_number', $username)->first();
+        
         // Checking if user exist in Database
         if (blank($user)) {
             echo "User not found!";
