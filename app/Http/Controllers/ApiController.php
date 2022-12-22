@@ -8,7 +8,6 @@ use App\Models\Fraud;
 use App\Models\Transaction;
 use App\Models\Subscription;
 
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 class ApiController extends Controller
 {
     //==--==--==--==-- User Register --==--==--==--==--==
+
     public function register(Request $request)
     {
         // Assigning Arguments to Variables 
@@ -30,17 +30,17 @@ class ApiController extends Controller
 
         // Check if any of the required fields are empty!
         if (!$isField) {
-            echo "Some fields are required!!!";
-            return;
+            return Response()->json (["status" => false, "message"=>"Some Fields are Required"]);
         }
+
         if (strlen($pincode) != 6) {
-            echo "Pincode must be 6 digits!";
-            return;
+            return Response()->json (["status" => false, "message"=>"Pincode must be 6 Digits"]);
+            
         }
 
         if (strlen($password) < 8) {
-            echo "password must be atleast 8 characters!";
-            return;
+            return Response()->json (["status" => false, "message"=>"Password must be atleast 8 Characters"]);
+            
         }
 
         // Check if details are already existed!
@@ -71,7 +71,6 @@ class ApiController extends Controller
         $data['user'] = $user;
 
         return Response()->json($data);
-        return;
     }
 
     //==--==--==--==-- User Login --==--==--==--==--==
@@ -83,34 +82,37 @@ class ApiController extends Controller
         $password = $request->input('password');
 
         // Checking if fields are empty
-        $isField = isset($username) ?? isset($password);
+        $isField = isset($username) && isset($password);
         if (!$isField) {
-            echo "Some fields are required!";
-            return;
+            return Response()->json (["status" => false, "message"=>"Some Fields are Required"]);
+           
         }
 
         // Fetching User data from Database
-        $user = User::where('mobile_number', $username)->first();
+        $user = User::where('mobile_number', $username)->orWhere('member_id',$username)->first();
         
         // Checking if user exist in Database
         if (blank($user)) {
-            echo "User not found!";
-            return;
+         
+            return Response()->json (["status" => false, "message"=> "Incorrect username or password"]);
         }
-
 
         // Checking Hashed Password from database
         if (Hash::check($password, $user->password)) {
 
             return Response()->json(["status" => true, "message" => "Logged in successfully", "user" => $user]);
-        } else {
+        } 
+        else {
             return Response()->json(["status" => false, "message" => "Incorrect username or password"]);
         }
 
-        return;
+        
+
+
     }
 
     //==--==--==--==-- Shop Register --==--==--==--==--==
+
     public function shopRegister (Request $request)
     {
         // Assigning Arguments to Variables 
@@ -127,16 +129,15 @@ class ApiController extends Controller
 
         // Check if any of the required fields are empty!
         if (!$isField) {
-            echo "Some fields are required!";
-            return;
+           return Response()->json (["status" => false, "message"=>"Some Fields are Required"]);
         }
         if (strlen($pincode) != 6) {
-            echo "Pincode must be 6 digits!";
-            return;
+            return Response()->json (["status" => false, "message"=>"Pincode should be 6 digits"]);
+           
         }
-        if (strlen($mobile_number) < 10) {
-            echo " Mobile Number must be atleast 10 digits!";
-            return;
+        if (strlen($mobile_number)!=10) {
+            return Response()->json (["status" => false, "message"=>"Mobile Number should be atleast 10 Digits"]);
+            
         }
 
         // Check if details are already existed!
@@ -170,7 +171,7 @@ class ApiController extends Controller
         $data['shop'] = $shop;
 
         return Response()->json($data);
-        return;
+    
     }
 
     //==--==--==--==-- Shop Login --==--==--==--==--==
@@ -178,22 +179,23 @@ class ApiController extends Controller
     public function shopLogin(Request $request)
     {
         $shop_username = $request->input('username');
+        $member_id = $request->input('member_id');
 
         // Checking if fields are empty
         $isField = isset($shop_username) && isset($member_id);
 
-        if (!$isField) {
-            echo " Mobile number is required! ";
-            return;
+        if(!$isField) {
+            return Response()->json (["status" => false, "message"=>"Mobile Number is Required"]);
+            
         }
 
         // Fetching shop data from Database
-        $shop = Shop::where('mobile_number', $shop_username)->first();
+        $Shop = Shop::where('mobile_number', $shop_username)->first();
 
         // Checking if user exist in Database
         if (blank($shop_username)) {
-            echo " User not found!";
-            return;
+
+            return Response()->json (["status" => false, "message"=>"User not Found"]);
         }
     }
 
@@ -217,13 +219,13 @@ class ApiController extends Controller
 
         // Check if any of the required fields are empty!
         if (!$isField) {
-            echo "Some fields are required!";
-            return;
+            return Response()->json(["status" => false, "message" => "Some Fields are Required!"]);
         }
 
-        if (strlen($mobile_number) < 10) {
-            echo " Mobile Number must be atleast 10 digits!";
-            return;
+        if (strlen($mobile_number) != 10) {
+           
+            return Response()->json (["status" => false, "message"=>"Mobile Number should be atleast 10 Digits"]);
+           
         }
 
         // Check if details are already existed!
@@ -256,7 +258,7 @@ class ApiController extends Controller
         $data['Fraud'] = $fraud;
 
         return Response()->json($data);
-        return;
+       
     }
 
     //==--==--==--==-- Fraud Search --==--==--==--==--==
@@ -268,10 +270,7 @@ class ApiController extends Controller
 
         return Fraud::where('name', 'like', "%" . $query . "%")
             ->orWhere('mobile_number', 'like', '%' . $query . '%')->get();
-    
-        return;
-
-        
+   
     }
 
     //==--==--==--==-- Frauds By Shop --==--==--==--==--==
@@ -280,7 +279,14 @@ class ApiController extends Controller
 
     {
         $shop_id = $request->input('shop_id');
-        return  Fraud::where('shop_id', $shop_id)->get();
+        return  Fraud::where('shop_id', $shop_id)->get();  
+              
+        // $shop_id = $request->input('shop_id');
+        // $results= DB::table('frauds')
+        //             ->where('shop_id', 'Like' , $Shop_id.'%')->get();
+        
+        // return Response()->json([  'results' => $results]);
+                              
     }
 
     //==--==--==--==-- Transaction Register --==--==--==--==--==
@@ -300,9 +306,10 @@ class ApiController extends Controller
         $isField = isset($name) && isset($transaction_id) && isset($dump) && isset($shop_id) && isset($subscription_id) && isset($status);
 
         // Check if any of the required fields are empty!
+
         if (!$isField) {
-            echo "Some fields are required !";
-            return;
+            
+            return Response()->json (["status" => false, "message"=>"Some Feilds are Required"]);
         }
 
         // Check if details are already existed!
@@ -334,7 +341,6 @@ class ApiController extends Controller
         $data['Transaction'] = $transaction;
 
         return Response()->json($data);
-        return;
     }
 
     //==--==--==--==-- Transaction by subscription_id  --==--==--==--==--==
@@ -365,7 +371,7 @@ class ApiController extends Controller
         // Check if any of the required fields are empty!
         if (!$isField) {
             echo "Some fields are required!";
-            return;
+            
         }
 
         // Check if details are already existed!
@@ -397,7 +403,7 @@ class ApiController extends Controller
         $data['Subscription'] = $subscription;
 
         return Response()->json($data);
-        return;
+       
     }
 
     //==--==--==--==-- Subscription List  --==--==--==--==--==

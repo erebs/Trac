@@ -15,7 +15,7 @@ class CreateTransactionsTable extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('name',32);
+            $table->string('name',32)->default('');
             $table->string('transaction_id')->nullable();
             $table->string('dump',512);
             $table->string('shop_id')->nullable();
