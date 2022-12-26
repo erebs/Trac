@@ -30,17 +30,15 @@ class ApiController extends Controller
 
         // Check if any of the required fields are empty!
         if (!$isField) {
-            return Response()->json (["status" => false, "message"=>"Some Fields are Required"]);
+            return Response()->json(["status" => false, "message" => "Some Fields are Required"]);
         }
 
         if (strlen($pincode) != 6) {
-            return Response()->json (["status" => false, "message"=>"Pincode must be 6 Digits"]);
-            
+            return Response()->json(["status" => false, "message" => "Pincode must be 6 Digits"]);
         }
 
         if (strlen($password) < 8) {
-            return Response()->json (["status" => false, "message"=>"Password must be atleast 8 Characters"]);
-            
+            return Response()->json(["status" => false, "message" => "Password must be atleast 8 Characters"]);
         }
 
         // Check if details are already existed!
@@ -84,36 +82,30 @@ class ApiController extends Controller
         // Checking if fields are empty
         $isField = isset($username) && isset($password);
         if (!$isField) {
-            return Response()->json (["status" => false, "message"=>"Some Fields are Required"]);
-           
+            return Response()->json(["status" => false, "message" => "Some Fields are Required"]);
         }
 
         // Fetching User data from Database
-        $user = User::where('mobile_number', $username)->orWhere('member_id',$username)->first();
-        
+        $user = User::where('mobile_number', $username)->orWhere('member_id', $username)->first();
+
         // Checking if user exist in Database
         if (blank($user)) {
-         
-            return Response()->json (["status" => false, "message"=> "Incorrect username or password"]);
+
+            return Response()->json(["status" => false, "message" => "Incorrect username password"]);
         }
 
         // Checking Hashed Password from database
         if (Hash::check($password, $user->password)) {
 
             return Response()->json(["status" => true, "message" => "Logged in successfully", "user" => $user]);
-        } 
-        else {
+        } else {
             return Response()->json(["status" => false, "message" => "Incorrect username or password"]);
         }
-
-        
-
-
     }
 
     //==--==--==--==-- Shop Register --==--==--==--==--==
 
-    public function shopRegister (Request $request)
+    public function shopRegister(Request $request)
     {
         // Assigning Arguments to Variables 
         $shop_name = $request->input('shop_name');
@@ -129,15 +121,13 @@ class ApiController extends Controller
 
         // Check if any of the required fields are empty!
         if (!$isField) {
-           return Response()->json (["status" => false, "message"=>"Some Fields are Required"]);
+            return Response()->json(["status" => false, "message" => "Some Fields are Required"]);
         }
         if (strlen($pincode) != 6) {
-            return Response()->json (["status" => false, "message"=>"Pincode should be 6 digits"]);
-           
+            return Response()->json(["status" => false, "message" => "Pincode should be 6 digits"]);
         }
-        if (strlen($mobile_number)!=10) {
-            return Response()->json (["status" => false, "message"=>"Mobile Number should be atleast 10 Digits"]);
-            
+        if (strlen($mobile_number) != 10) {
+            return Response()->json(["status" => false, "message" => "Mobile Number should be atleast 10 Digits"]);
         }
 
         // Check if details are already existed!
@@ -171,30 +161,31 @@ class ApiController extends Controller
         $data['shop'] = $shop;
 
         return Response()->json($data);
-    
     }
 
     //==--==--==--==-- Shop Login --==--==--==--==--==
 
     public function shopLogin(Request $request)
     {
-        $shop_username = $request->input('username');
+        $mobile_number = $request->input('mobile_number');
 
         // Checking if fields are empty
-        $isField = isset($shop_username);
+        $isField = isset($mobile_number);
 
-        if(!$isField) {
-            return Response()->json (["status" => false, "message"=>"Mobile Number is Required"]);
-            
+        if (!$isField) {
+            return Response()->json(["status" => false, "message" => "Mobile Number is Required"]);
         }
 
         // Fetching shop data from Database
-        $Shop = Shop::where('mobile_number', $shop_username)->first();
+        $shop = Shop::where('mobile_number', $mobile_number)->first();
 
         // Checking if user exist in Database
-        if (blank($shop_username)) {
+        if (blank($shop)) {
 
-            return Response()->json (["status" => false, "message"=>"Shop not Found"]);
+            return Response()->json(["status" => false, "message" => "Shop not found"]);
+        } else {
+
+            return Response()->json(["status" => true, "message" => "Logged in successfully", "shop" => $shop]);
         }
     }
 
@@ -222,9 +213,8 @@ class ApiController extends Controller
         }
 
         if (strlen($mobile_number) != 10) {
-           
-            return Response()->json (["status" => false, "message"=>"Mobile Number should be atleast 10 Digits"]);
-           
+
+            return Response()->json(["status" => false, "message" => "Mobile Number should be atleast 10 Digits"]);
         }
 
         // Check if details are already existed!
@@ -257,7 +247,6 @@ class ApiController extends Controller
         $data['Fraud'] = $fraud;
 
         return Response()->json($data);
-       
     }
 
     //==--==--==--==-- Fraud Search --==--==--==--==--==
@@ -269,7 +258,6 @@ class ApiController extends Controller
 
         return Fraud::where('name', 'like', "%" . $query . "%")
             ->orWhere('mobile_number', 'like', '%' . $query . '%')->get();
-   
     }
 
     //==--==--==--==-- Frauds By Shop --==--==--==--==--==
@@ -278,14 +266,14 @@ class ApiController extends Controller
 
     {
         $shop_id = $request->input('shop_id');
-        return  Fraud::where('shop_id', $shop_id)->get();  
-              
+        return  Fraud::where('shop_id', $shop_id)->get();
+
         // $shop_id = $request->input('shop_id');
         // $results= DB::table('frauds')
         //             ->where('shop_id', 'Like' , $Shop_id.'%')->get();
-        
+
         // return Response()->json([  'results' => $results]);
-                              
+
     }
 
     //==--==--==--==-- Transaction Register --==--==--==--==--==
@@ -307,8 +295,8 @@ class ApiController extends Controller
         // Check if any of the required fields are empty!
 
         if (!$isField) {
-            
-            return Response()->json (["status" => false, "message"=>"Some Feilds are Required"]);
+
+            return Response()->json(["status" => false, "message" => "Some Feilds are Required"]);
         }
 
         // Check if details are already existed!
@@ -370,7 +358,6 @@ class ApiController extends Controller
         // Check if any of the required fields are empty!
         if (!$isField) {
             echo "Some fields are required!";
-            
         }
 
         // Check if details are already existed!
@@ -402,7 +389,6 @@ class ApiController extends Controller
         $data['Subscription'] = $subscription;
 
         return Response()->json($data);
-       
     }
 
     //==--==--==--==-- Subscription List  --==--==--==--==--==
@@ -413,7 +399,4 @@ class ApiController extends Controller
         $shop_id = $request->input('shop_id');
         return  Subscription::where('shop_id', $shop_id)->get();
     }
-
 }
-
-
