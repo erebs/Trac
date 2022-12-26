@@ -179,10 +179,9 @@ class ApiController extends Controller
     public function shopLogin(Request $request)
     {
         $shop_username = $request->input('username');
-        $member_id = $request->input('member_id');
 
         // Checking if fields are empty
-        $isField = isset($shop_username) && isset($member_id);
+        $isField = isset($shop_username);
 
         if(!$isField) {
             return Response()->json (["status" => false, "message"=>"Mobile Number is Required"]);
@@ -195,7 +194,7 @@ class ApiController extends Controller
         // Checking if user exist in Database
         if (blank($shop_username)) {
 
-            return Response()->json (["status" => false, "message"=>"User not Found"]);
+            return Response()->json (["status" => false, "message"=>"Shop not Found"]);
         }
     }
 
