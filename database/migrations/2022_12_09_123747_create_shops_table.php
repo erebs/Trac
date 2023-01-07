@@ -15,13 +15,13 @@ class CreateShopsTable extends Migration
     {
         Schema::create('shops', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('user_id')->nullable();
-            $table->string('shop_name',32)->default('');
-            $table->string('mobile_number',13)->default('');
-            $table->string('gst',15)->default('');
-            $table->string('pincode',6)->default('');
-            $table->string('constituency',)->default('');
-            $table->string('shop_address',)->default('');
+            $table->integer('user_id');
+            $table->string('shop_name',32)->required();
+            $table->string('mobile_number',13)->required();
+            $table->string('gst',15)->required();
+            $table->string('pincode',6)->required();
+            $table->string('constituency',)->required();
+            $table->string('shop_address',)->required();
             $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
             $table->timestamps();
         });

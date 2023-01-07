@@ -15,14 +15,14 @@ class CreateFraudsTable extends Migration
     {
         Schema::create('frauds', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('shop_id')->nullable();
-            $table->string('name',32)->default('');
-            $table->string('mobile_number',13)->default('');
-            $table->string('address',512)->default('');
+            $table->integer('shop_id');
+            $table->string('name',32);
+            $table->string('mobile_number',13);
+            $table->string('address',512);
             $table->string('profile_photo',256)->nullable();
-            $table->enum('type',['Aadhaar','Pancard','Voters-id','Licence','Passport'])->default('Aadhaar');
-            $table->string('proof_number',32)->default('');
-            $table->text('description',256)->default('');
+            $table->enum('proof_type',['Aadhaar','Pancard','Voters-id','Licence','Passport']);
+            $table->string('proof_number',32);
+            $table->text('description',256);
             $table->string('approved_by',256)->nullable();
             $table->timestamps();  
         });

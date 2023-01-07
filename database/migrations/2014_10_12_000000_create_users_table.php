@@ -16,11 +16,11 @@ class CreateUsersTable extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->increments('id');
             $table->string('name',32)->required();
-            $table->integer('member_id')->required();
+            $table->string('member_id')->required();
             $table->string('mobile_number','13')->required();
             $table->string('pincode','6')->required();
             $table->string('password','512')->required();
-            $table->string('constituency','64')->default('');
+            $table->string('constituency','64')->required();
             $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
             $table->timestamps();
         });
