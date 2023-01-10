@@ -203,18 +203,18 @@ class ApiController extends Controller
 	public function shopsByUser(Request $request)
 	{
 		$user_id = $request->input('user_id');
-		$shop_id = $request->input('shop_id');
-		Shop::where('user_id', $user_id)->get();
 
 
-		$validator = Validator::make($request->all(), ['user_id' => 'required', 'shop_id' => 'required']);
+		$validator = Validator::make($request->all(), ['user_id' => 'required']);
 
 		if ($validator->fails()) {
 
-			return Response()->json(["status" => false, "message" => 'Some fields are required']);
+			return Response()->json(["status" => false, "message" => 'user_id is required']);
 		}
 
-		return Response()->json(["status" => false, "message" => 'user_id']);
+		$shops = Shop::where('user_id', $user_id)->get();
+
+		return Response()->json(["status" => true, "message" => 'success', "shops" => $shops]);
 	}
 
 	//==--==--==--==-- Fraud Create --==--==--==--==--==
@@ -462,20 +462,20 @@ class ApiController extends Controller
 		]);
 
 		if ($validator->fails()) {
-			return Response()->json([
-				'message' => 'validations fails',
-				'errors' => $validator->errors()
+			return Response()->json(["status" => false, "message" => "Invalid name and shop address"]);
+
+			$shop = new Shop();
+			$shop->update([
+				'shop_name' => $request->shop_name,
+				'shop_address' => $request->shop_address,
 			]);
 
-			// $shop->update([
-			// 	'shop_name' => $request->shop_name,
-			// 	'shop_address' => $request->shop_address,
-			// ]);
-
-			return Response()->json(["status" => false, "message" => "Shop updated successfully"]);
+			return Response()->json(["status" => true, "message" => "Shop updated successfully"]);
 		}
 	}
-	// ==--==--==--==--==--==- Change password ==--==--==--==--
+
+	// ==--==--==--==--==- Change Password ==--==--==--==--
+
 	public function updatePassword(Request $request)
 
 	{
@@ -496,9 +496,9 @@ class ApiController extends Controller
 				'password' => Hash::make($request->password)
 			]);
 
-			return Response()->json(["status" => false, "message" => "Old password dosent match"]);
+			return Response()->json(["status" => false, "message" => "Old password doesnt match"]);
 		} else {
-			return Response()->json(["status" => false, "message" => "Password updated successfully"]);
+			return Response()->json(["status" => true, "message" => "Password updated successfully"]);
 		}
 	}
 }
