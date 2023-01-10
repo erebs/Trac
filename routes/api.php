@@ -30,10 +30,11 @@ Route::post('/login',[ApiController::class,'userLogin']);
 
 Route::post('/shop_register',[ApiController::class,'shopRegister']);
 Route::post('/shop_login',[ApiController::class,'shopLogin']);
+Route::post('/shops_by_user',[ApiController::class,'shopsByUser']);
 
 /********************** Fraud ************************************************ */
 
-Route::post('/fraud_register',[ApiController::class,'fraudRegister']);
+Route::post('/fraud_create',[ApiController::class,'fraudCreate']);
 Route::post('/search_fraud',[ApiController::class,'searchFraud']);
 Route::post('/fruad_by_shop',[ApiController::class,'fraudsByShop']);
 
@@ -47,7 +48,14 @@ Route::post('/get_transaction',[ApiController::class,'getTransaction']);
 Route::post('/subscription_register',[ApiController::class,'subscriptionRegister']);
 Route::post('/get_subscription',[ApiController::class,'getsubscription']);
 
-/******************************************************************************  */
+/******************** Profile Updation *************************************** */
+
+
+Route::post('/update_profile',[ApiController::class,'updateProfile']);
+
+/************************ change password ************************************************ */
+
+Route::post('change-password', [ApiController::class,'changePassword']);
 
 
 

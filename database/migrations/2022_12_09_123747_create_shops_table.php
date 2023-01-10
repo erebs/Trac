@@ -20,8 +20,8 @@ class CreateShopsTable extends Migration
             $table->string('mobile_number',13)->required();
             $table->string('gst',15)->required();
             $table->string('pincode',6)->required();
-            $table->string('constituency',)->required();
-            $table->string('shop_address',)->required();
+            $table->string('constituency')->required();
+            $table->string('shop_address')->required();
             $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
             $table->timestamps();
         });

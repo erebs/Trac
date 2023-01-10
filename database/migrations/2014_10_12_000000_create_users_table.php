@@ -15,12 +15,13 @@ class CreateUsersTable extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('name',32)->required();
-            $table->string('member_id')->required();
-            $table->string('mobile_number','13')->required();
-            $table->string('pincode','6')->required();
-            $table->string('password','512')->required();
-            $table->string('constituency','64')->required();
+            $table->string('name',32);
+            $table->string('member_id');
+            $table->string('mobile_number','13');
+            $table->string('pincode','6');
+            // $table->string('district','32');
+            $table->string('password','100');
+            $table->string('constituency','64');
             $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
             $table->timestamps();
         });
