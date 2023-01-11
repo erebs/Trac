@@ -26,8 +26,9 @@ class ApiController extends Controller
 		$password = $request->input('password');
 		$constituency = $request->input('constituency');
 		$pincode = $request->input('pincode');
+		$district = $request->input('district');
 
-		$isField = isset($name) && isset($mobile_number) && isset($member_id) && isset($password) && isset($pincode) && isset($constituency);
+		$isField = isset($name) && isset($mobile_number) && isset($member_id) && isset($password) && isset($pincode) && isset($constituency) && isset($constituency);
 
 		// Check if any of the required fields are empty!
 		if (!$isField) {
@@ -62,6 +63,7 @@ class ApiController extends Controller
 		$user->mobile_number = $mobile_number;
 		$user->constituency = $constituency;
 		$user->pincode = $pincode;
+		$user->district = $district;
 		$user->save();
 
 		$data = [];
@@ -72,7 +74,28 @@ class ApiController extends Controller
 		return Response()->json($data);
 	}
 
+	//==--==--==--==-- User Register Validation --==--==--==--==--==
+
+	public function registerValidation(Request $request)
+	{
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'mobile_number' => ['required', 'unique:users,mobile_number'],
+				'member_id' => ['required', 'unique:users,id']
+			],
+		);
+
+
+		if ($validator->fails()) {
+			return response()->json(["status" => false, 'message' => $validator->errors()]);
+		} else {
+			return response()->json(["status" => true, 'message' => "Validated successfully"]);
+		}
+	}
+
 	//==--==--==--==-- User Login --==--==--==--==--==
+
 	public function userLogin(Request $request)
 	{
 
@@ -161,7 +184,7 @@ class ApiController extends Controller
 		$shop->constituency = $constituency ?? '';
 		$shop->pincode = $pincode ?? '';
 		$shop->shop_address = $shop_address;
-		$shop->status = $status ?? 'Pending';
+		$shop->status = $status ?? 'pending';
 		$shop->save();
 
 		$data = [];
@@ -214,7 +237,7 @@ class ApiController extends Controller
 
 		$shops = Shop::where('user_id', $user_id)->get();
 
-		return Response()->json(["status" => true, "message" => 'success', "shops" => $shops]);
+		return Response()->json(["status" => true, "message" => 'success', 'shops' => $shops]);
 	}
 
 	//==--==--==--==-- Fraud Create --==--==--==--==--==
@@ -248,7 +271,7 @@ class ApiController extends Controller
 
 		// Check if details are already existed!
 		$isMobile = Fraud::where('mobile_number', $mobile_number)->count();
-		$isProof = Fraud::where('proof_number', $proof_number)->count();
+		$isProof  = Fraud::where('proof_number', $proof_number)->count();
 		$isShopId = Shop::where('id', $shop_id)->count();
 
 		if ($isShopId == 0) {
@@ -480,14 +503,14 @@ class ApiController extends Controller
 
 	{
 		$validator = Validator::make($request->all(), [
-			'password' => 'required|min:6| max:100',
+			'old password' => 'required|min:6| max:32',
+			'password' => 'required|min:6| max:32'
 		]);
 
 		if ($validator->fails()) {
-			return Response()->json([
-				'message' => 'validations fails',
-				'errors' => $validator->errors()
-			]);
+			return response()->json(["status" => false, 'errors' => $validator->errors()]);
+		} else {
+			return response()->json(["status" => true, "message" => "Validation Success"]);
 		}
 
 		$user = $request->user();
@@ -495,6 +518,7 @@ class ApiController extends Controller
 			$user->update([
 				'password' => Hash::make($request->password)
 			]);
+
 
 			return Response()->json(["status" => false, "message" => "Old password doesnt match"]);
 		} else {

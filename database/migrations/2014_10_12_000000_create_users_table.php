@@ -19,7 +19,7 @@ class CreateUsersTable extends Migration
             $table->string('member_id');
             $table->string('mobile_number','13');
             $table->string('pincode','6');
-            // $table->string('district','32');
+            $table->string('district','32');
             $table->string('password','100');
             $table->string('constituency','64');
             $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
