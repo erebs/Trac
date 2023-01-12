@@ -12,6 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 
 class ApiController extends Controller
 {
@@ -81,11 +83,14 @@ class ApiController extends Controller
 		$validator = Validator::make(
 			$request->all(),
 			[
-				'mobile_number' => ['required', 'unique:users,mobile_number'],
-				'member_id' => ['required', 'unique:users,id']
+				'mobile_number' => 'unique:users,mobile_number',
+				'member_id' => 'unique:users,member_id'
 			],
+			[
+				'mobile_number.unique' => 'Mobile number already exists',
+				'member_id.unique' => 'Member id already exists',
+			]
 		);
-
 
 		if ($validator->fails()) {
 			return response()->json(["status" => false, 'message' => $validator->errors()]);
@@ -148,8 +153,10 @@ class ApiController extends Controller
 		$status = $request->input('status');
 		$constituency = $request->input('constituency');
 		$pincode = $request->input('pincode');
+		$district = $request->input('district');
 
-		$isField = isset($shop_name) && isset($mobile_number) && ($pincode) && ($gst)  && ($constituency) && ($user_id);
+
+		$isField = isset($shop_name) && isset($mobile_number) && ($pincode) && ($gst)  && ($constituency) && ($user_id) && ($district);
 
 		// Check if any of the required fields are empty!
 		if (!$isField) {
@@ -183,6 +190,7 @@ class ApiController extends Controller
 		$shop->mobile_number = $mobile_number ?? '';
 		$shop->constituency = $constituency ?? '';
 		$shop->pincode = $pincode ?? '';
+		$shop->district = $district;
 		$shop->shop_address = $shop_address;
 		$shop->status = $status ?? 'pending';
 		$shop->save();
@@ -214,7 +222,7 @@ class ApiController extends Controller
 		// Checking if user exist in Database
 		if (blank($shop)) {
 
-			return Response()->json(["status" => false, "message" => "Shop  Mobile Number  does not exist!"]);
+			return Response()->json(["status" => false, "message" => "Shop Mobile Number does not exist!"]);
 		} else {
 
 			return Response()->json(["status" => true, "message" => "Logged in successfully", "shop" => $shop]);
@@ -228,14 +236,14 @@ class ApiController extends Controller
 		$user_id = $request->input('user_id');
 
 
-		$validator = Validator::make($request->all(), ['user_id' => 'required']);
+		$validator = Validator::make($request->all(), ['user_id' => ['required', 'exists:shops,user_id']]);
 
 		if ($validator->fails()) {
 
-			return Response()->json(["status" => false, "message" => 'user_id is required']);
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
 		}
 
-		$shops = Shop::where('user_id', $user_id)->get();
+		$shops = shop::where('user_id', $user_id)->get();
 
 		return Response()->json(["status" => true, "message" => 'success', 'shops' => $shops]);
 	}
@@ -254,7 +262,6 @@ class ApiController extends Controller
 		$proof_number = $request->input('proof_number');
 		$profile_photo = $request->input('profile_photo');
 		$description = $request->input('description');
-		$approved_by = $request->input('approved_by');
 
 		$isField = isset($shop_id) && isset($name) && isset($mobile_number) &&  isset($address)  &&  isset($proof_type) && isset($proof_number)  && isset($profile_photo) && isset($description);
 
@@ -285,12 +292,18 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => "Proof Number already exist!"]);
 		}
 
+		// $rawDataExploder = explode(";", $profile_photo);
+		// $dataExploder = explode(",", $rawDataExploder[1]);
+		$imageData = base64_decode($profile_photo);
+		$imageFileName = strtolower('img' . Carbon::now()->timestamp . Str::random(4).'.jpg');
+		file_put_contents(public_path() . '/uploads/' . $imageFileName, $imageData) or print_r(error_get_last());
+
 		$fraud = new Fraud();
 		$fraud->shop_id = $shop_id;
 		$fraud->name = $name;
 		$fraud->mobile_number = $mobile_number;
 		$fraud->address = $address;
-		$fraud->profile_photo = $profile_photo;
+		$fraud->profile_photo = $imageFileName;
 		$fraud->proof_type = $proof_type;
 		$fraud->proof_number = $proof_number;
 		$fraud->description = $description;
@@ -322,25 +335,31 @@ class ApiController extends Controller
 
 	{
 		$shop_id = $request->input('shop_id');
-		return  Fraud::where('shop_id', $shop_id)->get();
+
+
+		$validator = Validator::make($request->all(), ['shop_id' => ['required']]);
+
+		if ($validator->fails()) {
+
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
+		}
+
+		$frauds = Fraud::where('shop_id', $shop_id)->get();
+
+		return Response()->json(["status" => true, "message" => 'success', 'frauds' => $frauds]);
 	}
 
 	//==--==--==--==-- Transaction Register --==--==--==--==
 
 	public function transactionRegister(Request $request)
-
 	{
 		// Assigning Arguments to Variables 
 		$shop_id = $request->input('shop_id');
-		$name = $request->input('name');
-		$transaction_id = $request->input('transaction_id');
+		$user_id = $request->input('user_id');
 		$dump = $request->input('dump');
-		$shop_id = $request->input('shop_id');
-		$subscription_id = $request->input('subscription_id');
 		$status = $request->input('status');
 
-
-		$isField = isset($name) && isset($transaction_id) && isset($dump) && isset($shop_id) && isset($subscription_id) && isset($status);
+		$isField = isset($name) && isset($shop_id) && isset($user_id) && isset($dump) && isset($status);
 
 		// Check if any of the required fields are empty!
 
@@ -350,26 +369,23 @@ class ApiController extends Controller
 		}
 
 		// Check if details are already existed!
-		$isSubscription = Transaction::where('subscription_id', $subscription_id)->count();
-		$isTransaction = Transaction::where('transaction_id', $transaction_id)->count();
 
+		$isShop = Transaction::where('shop_id', $shop_id)->count();
+		$isUser = Transaction::where('user_id', $user_id)->count();
 
-		// if ($isTransaction != 0) {
+		if ($isShop != 0) {
 
-		//     return Response()->json(["status" => false, "message" => "Transaction Id Already Exists!"]);
-		// }
+			return Response()->json(["status" => false, "message" => "Shop Id Already Exists!"]);
+		}
+		if ($isUser != 0) {
 
-		if ($isSubscription != 0) {
-
-			return Response()->json(["status" => false, "message" => "Subscription Id Already Exists!"]);
+			return Response()->json(["status" => false, "message" => "User Id Already Exists!"]);
 		}
 
 		$transaction = new Transaction();
-		$transaction->name = $name ?? '';
-		$transaction->transaction_id = $transaction_id ?? '';
-		$transaction->dump = $dump ?? '';
 		$transaction->shop_id = $shop_id ?? '';
-		$transaction->subscription_id = $subscription_id ?? 'c';
+		$transaction->user_id = $user_id ?? '';
+		$transaction->dump = $dump ?? '';
 		$transaction->status = $status ?? '';
 		$transaction->save();
 
@@ -398,14 +414,17 @@ class ApiController extends Controller
 		// Assigning Arguments to Variables
 
 		$name = $request->input('name');
-		$transaction_id = $request->input('transaction_id');
+		$user_id = $request->input('user_id');
 		$shop_id = $request->input('shop_id');
+		$transaction_id = $request->input('transaction_id');
+		$price = $request->input('price');
+		$plans = $request->input('plans');
 		$subscription_StartDate = $request->input('subscription_StartDate');
 		$subscription_EndDate = $request->input('subscription_EndDate');
-		$subscription_status = $request->input('subscription_status');
 
 
-		$isField = isset($name) && isset($transaction_id) && isset($shop_id) && isset($subscription_StartDate) && isset($subscription_EndDate) && isset($subscription_status);
+
+		$isField = isset($name) && isset($user_id) && isset($shop_id) && isset($transaction_id) && isset($price) && isset($plans) && isset($subscription_StartDate) && isset($subscription_EndDate);
 
 		// Check if any of the required fields are empty!
 		if (!$isField) {
@@ -415,28 +434,35 @@ class ApiController extends Controller
 		// Check if details are already existed!
 
 		$isTransaction = Subscription::where('transaction_id', $transaction_id)->count();
-		// $isShop = Subscription::where('shop_id', $shop_id)->count();
+		$isShop = Subscription::where('shop_id', $shop_id)->count();
+		$isUser = Subscription::where('user_id', $user_id)->count();
 
 		if ($isTransaction != 0) {
 
 			return Response()->json(["status" => false, "message" => "Transaction Id Already Exists ! "]);
 		}
-		// if ($isShop != 0) {
+		if ($isShop != 0) {
 
-		//     return Response()->json(["status" => false, "message" => "Shop Id Already Exists!"]);
-		// }
+			return Response()->json(["status" => false, "message" => "Shop Id Already Exists!"]);
+		}
+		if ($isUser != 0) {
+
+			return Response()->json(["status" => false, "message" => "User Id Already Exists!"]);
+		}
 
 		$subscription = new Subscription();
-		$subscription->name = $name ?? '';
-		$subscription->transaction_id = $transaction_id ?? '';
-		$subscription->shop_id = $shop_id ?? '';
-		$subscription->subscription_StartDate = $subscription_StartDate ?? '';
-		$subscription->subscription_EndDate = $subscription_EndDate ?? '';
-		$subscription->subscription_status = $subscription_status ?? '';
+		$subscription->name = $name;
+		$subscription->user_id = $user_id;
+		$subscription->shop_id = $shop_id;
+		$subscription->transaction_id = $transaction_id;
+		$subscription->price = $price;
+		$subscription->plans = $plans;
+		$subscription->subscription_StartDate = $subscription_StartDate;
+		$subscription->subscription_EndDate = $subscription_EndDate;
 		$subscription->save();
 
 		$data = [];
-		$data['status'] = true;
+		$data['status']  = true;
 		$data['message'] = 'Success';
 		$data['Subscription'] = $subscription;
 
@@ -448,12 +474,35 @@ class ApiController extends Controller
 	public function getSubscription(Request $request)
 
 	{
+
 		$shop_id = $request->input('shop_id');
-		return  Subscription::where('shop_id', $shop_id)->get();
+		$user_id = $request->input('user_id');
+
+		$validator = Validator::make(
+			$request->all(),
+
+			[
+				'shop_id' => 'required|exists:subscriptions,shop_id',
+				'user_id' => 'required|exists:subscriptions,user_id'
+			],
+			[
+				'shop_id.unique' => 'shop Id already exists',
+				'user_id.unique' => 'User Id already exists',
+			]
+		);
+
+		if ($validator->fails()) {
+
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
+		}
+
+		$subscription = Subscription::where('Shop_id', $shop_id)->get();
+
+		return Response()->json(["status" => true, "message" => 'success', 'Subscription' => $subscription]);
 	}
 
 	//==--===--==--==--==-- User Update  --==--==--==--==--==--==
-	public function userUpdate(Request $request)
+	public function updateProfile(Request $request)
 
 	{
 		$validator = Validator::make($request->all(), [
@@ -461,17 +510,16 @@ class ApiController extends Controller
 		]);
 
 		if ($validator->fails()) {
-			return Response()->json(["status" => false, "message" => "Entered name is invalid"]);
+			return Response()->json(["status" => false, "message" => "Invalid name "]);
 
-			$user = new User();
-			$user->update([
+			$shop = new Shop();
+			$shop->update([
 				'name' => $request->name,
 			]);
 
-			return Response()->json(["status" => true, "message" => "Profile updated successfully"]);
+			return Response()->json(["status" => true, "message" => "Name updated successfully"]);
 		}
 	}
-
 
 	// ==--==--==--== Shop Update ==--==--==--==--
 
@@ -485,7 +533,7 @@ class ApiController extends Controller
 		]);
 
 		if ($validator->fails()) {
-			return Response()->json(["status" => false, "message" => "Invalid name and shop address"]);
+			return Response()->json(["status" => false, "message" => "Invalid  shop name and shop address"]);
 
 			$shop = new Shop();
 			$shop->update([
@@ -494,6 +542,22 @@ class ApiController extends Controller
 			]);
 
 			return Response()->json(["status" => true, "message" => "Shop updated successfully"]);
+		}
+	}
+	// ===--===---===---===- change Shop status ==--===--==---==
+
+	public function shopStatusUpdate(Request $request)
+	{
+		$status = $request->input('status') ?? 'Pending';
+		$id = $request->input('id') ?? 0;
+		if ($id > 0) {
+			$shops = Shop::find($id);
+			$shops->status = $status;
+			$shops->save();
+
+			return Response()->json(["status" => true, "message" => "Status updated"]);
+		} else {
+			return Response()->json(["status" => false, "message" => "Something went wrong"]);
 		}
 	}
 
@@ -519,10 +583,28 @@ class ApiController extends Controller
 				'password' => Hash::make($request->password)
 			]);
 
-
 			return Response()->json(["status" => false, "message" => "Old password doesnt match"]);
 		} else {
 			return Response()->json(["status" => true, "message" => "Password updated successfully"]);
 		}
+	}
+
+	// ==--===---===--  Image Upload  ==--===---===---===--===
+
+	public function imageUpload(Request $request)
+	{
+		$imageData = $request->input('image_data');
+		$rawDataExploder = explode(";", $imageData);
+		$dataExploder = explode(",", $rawDataExploder[1]);
+		$imageData = base64_decode($dataExploder[1]);
+		$imageFileName = strtolower('simg' . Carbon::now()->timestamp . Str::random(4));
+		file_put_contents(public_path() . $imageFileName . '.jpg', $imageData) or print_r(error_get_last());
+
+		$response['status'] = '01';
+		$response['message'] = 'Success';
+		$response['photo_id'] = $imageFileName;
+
+		return response($response, 200)
+			->header('Content-Type', 'application/json');
 	}
 }

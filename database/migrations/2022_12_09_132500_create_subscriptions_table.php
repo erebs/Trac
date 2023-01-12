@@ -15,13 +15,16 @@ class CreateSubscriptionsTable extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('name',32)->default('');
-            $table->string('transaction_id')->nullable();
-            $table->string('shop_id')->nullable();
+            $table->string('name', 32)->default('');
+            $table->string('user_id');
+            $table->string('shop_id');
+            $table->string('transaction_id');
+            $table->string('plans',64);
+            $table->string('price')->default(0);
             $table->date('subscription_StartDate')->nullable();
             $table->date('subscription_EndDate')->nullable();
-            $table->enum('subscription_status', ['Yes', 'No',''])->default('');
-            $table->timestamps();
+            
+        $table->timestamps();
         });
     }
 
@@ -34,5 +37,4 @@ class CreateSubscriptionsTable extends Migration
     {
         Schema::dropIfExists('subscriptions');
     }
-
 }

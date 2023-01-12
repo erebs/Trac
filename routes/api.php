@@ -26,12 +26,15 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::post('/register', [ApiController::class, 'register']);
 Route::post('/login', [ApiController::class, 'userLogin']);
 Route::post('/register_validation', [ApiController::class, 'registerValidation']);
+Route::post('/update_profile', [ApiController::class, 'updateProfile']);
 
 /*********************** Shop ************************************************ */
 
 Route::post('/shop_register', [ApiController::class, 'shopRegister']);
 Route::post('/shop_login', [ApiController::class, 'shopLogin']);
 Route::post('/shops_by_user', [ApiController::class, 'shopsByUser']);
+Route::post('/shop_status_update', [ApiController::class, 'shopStatusUpdate']);
+Route::post('/shop_update', [ApiController::class, 'shopUpdate']);
 
 /********************** Fraud ************************************************ */
 
@@ -49,11 +52,12 @@ Route::post('/get_transaction', [ApiController::class, 'getTransaction']);
 Route::post('/subscription_register', [ApiController::class, 'subscriptionRegister']);
 Route::post('/get_subscription', [ApiController::class, 'getsubscription']);
 
-/******************** Profile Updation *************************************** */
-
-
-Route::post('/update_profile', [ApiController::class, 'updateProfile']);
-
-/************************ change password ************************************************ */
+/************************ change  User password ************************************************ */
 
 Route::post('change-password', [ApiController::class, 'changePassword']);
+
+/*************************image upload**************************** */
+
+Route::post('image_upload', [ApiController::class, 'imageUpload']);
+
+

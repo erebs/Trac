@@ -15,12 +15,10 @@ class CreateTransactionsTable extends Migration
     {
         Schema::create('transactions', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('name',32)->default('');
-            $table->string('transaction_id')->nullable();
-            $table->string('dump',512);
-            $table->string('shop_id')->nullable();
-            $table->string('subscription_id')->nullable();
-            $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
+            $table->string('user_id');
+            $table->string('shop_id');
+            $table->string('dump', 512);
+            $table->enum('status', ['Success', 'Failed']);
             $table->timestamps();
         });
     }
@@ -34,5 +32,4 @@ class CreateTransactionsTable extends Migration
     {
         Schema::dropIfExists('transactions');
     }
-
 }
