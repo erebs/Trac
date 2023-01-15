@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use paytm\paytmchecksum\PaytmChecksum;
 
 
@@ -142,7 +143,7 @@ class ApiController extends Controller
 					return Response()->json(["status" => true, "is_active" => true, "message" => "Logged in successfully", "user" => $user, "shop" => $shop]);
 				} else {
 
-					return Response()->json(["status" => true, "is_active" => false, "message" => "Your shop have no active plan!", "user" => $user, "shop" => $shop]);
+					return Response()->json(["status" => true, "is_active" => false, "message" => "Your shop doesn't have an active plan!", "user" => $user, "shop" => $shop]);
 				}
 			}
 		} else {
@@ -342,7 +343,7 @@ class ApiController extends Controller
 		$query = $request->input('query');
 
 		return Fraud::where('name', 'like', "%" . $query . "%")
-			->orWhere('mobile_number', 'like', '%' . $query . '%')->get();
+			->orWhere('mobile_number', 'like', '%' . $query . '%')->orWhere('proof_number', 'like', '%' . $query . '%')->take(30)->get();
 	}
 
 	//==--==--==--==-- Frauds By Shop --==--==--==--==--==
@@ -403,16 +404,6 @@ class ApiController extends Controller
 
 		return Response()->json($data);
 	}
-
-	// //==--==--==--==-- Transaction by subscription_id  --==--==--==--==--==
-
-	// public function getTransaction(Request $request)
-
-	// {
-	// 	$subscription_id = $request->input('subscription_id');
-	// 	return  Transaction::where('subscription_id', $subscription_id)->get();
-
-	// }
 
 	//==--==--==--==-- Subscription Register  --==--==--==--==--==
 
@@ -536,20 +527,38 @@ class ApiController extends Controller
 			return Response()->json(["status" => true, "message" => "Shop updated successfully"]);
 		}
 	}
-	// ===--===---===---===- change Shop status ==--===--==---==
+	// ===--===---===---===- Shop Status Update ==--===--==---==
 
 	public function shopStatusUpdate(Request $request)
 	{
+		$shopId = $request->input('shop_id');
+		$userId = $request->input('user_id');
 		$status = $request->input('status');
-		$id = $request->input('shop_id');
-		if ($id > 0) {
-			$shops = Shop::find($id);
-			$shops->status = $status;
-			$shops->save();
 
-			return Response()->json(["status" => true, "message" => "Status updated"]);
+
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'shop_id' => 'required|exists:shops,id',
+				'user_id' => 'required|exists:shops,user_id',
+				'status' => ['required', Rule::in(['Active', 'Pending', 'Suspended', 'Deleted'])],
+			],
+
+		);
+
+
+		if ($validator->fails()) {
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
 		} else {
-			return Response()->json(["status" => false, "message" => "Something went wrong"]);
+			$shop = Shop::find($shopId);
+
+			if ($shop['user_id'] == $userId) {
+				$shop->status = $status;
+				$shop->save();
+				return Response()->json(["status" => true, "message" => "Shop status updated successfully"]);
+			} else {
+				return Response()->json(["status" => false, "message" => "User and Shop doesn't match!"]);
+			}
 		}
 	}
 
@@ -740,13 +749,13 @@ class ApiController extends Controller
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
 		$response = json_decode(curl_exec($ch), true);
-
+		$txnId = $response["body"]["txnId"] ?? null;
 		if ($response["body"]["resultInfo"]["resultCode"] == "01") { // 01 means success
-			$txnId = $response["body"]["txnId"];
 			return Response()->json(["status" => true, "message" => "TXN completed successfully", "txnId" => $txnId, "response" => $response]);
 		} else {
+
 			$message = $response["body"]["resultInfo"]["resultMsg"];
-			return Response()->json(["status" => false, "message" => $message, "response" => $response]);
+			return Response()->json(["status" => false, "message" => $message, "txnId" => $txnId, "response" => $response]);
 		}
 	}
 }
