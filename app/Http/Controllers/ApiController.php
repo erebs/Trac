@@ -4,16 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Shop;
+use App\Models\Image;
 use App\Models\Fraud;
 use App\Models\Transaction;
 use App\Models\Subscription;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use paytm\paytmchecksum\PaytmChecksum;
+
 
 class ApiController extends Controller
 {
@@ -107,11 +109,12 @@ class ApiController extends Controller
 		// Assigning Arguments to Variables
 		$username = $request->input('username');
 		$password = $request->input('password');
+		$shopNumber = $request->input('shop_number');
 
 		// Checking if fields are empty
 		$isField = isset($username) && isset($password);
 		if (!$isField) {
-			return Response()->json(["status" => false, "message" => "Some Fields are Required"]);
+			return Response()->json(["status" => false, "message" => "Some fields are required"]);
 		}
 
 		// Fetching User data from Database
@@ -127,14 +130,21 @@ class ApiController extends Controller
 		if (Hash::check($password, $user->password)) {
 
 			// Get User first shop
-			$shop = Shop::where('user_id', $user->id)->first();
+			$shop = Shop::where('user_id', $user->id)->where('mobile_number', $shopNumber)->first();
 
 			// Check if User has any Shop
 			if (blank($shop)) {
-				return Response()->json(["status" => false, "message" => "Shop is required to Login"]);
-			}
+				return Response()->json(["status" => false, "message" => "Incorrect shop number. Please try again"]);
+			} else {
 
-			return Response()->json(["status" => true, "message" => "Logged in successfully", "user" => $user, "shop" => $shop]);
+				if ($shop['status'] == 'Active') {
+
+					return Response()->json(["status" => true, "is_active" => true, "message" => "Logged in successfully", "user" => $user, "shop" => $shop]);
+				} else {
+
+					return Response()->json(["status" => true, "is_active" => false, "message" => "Your shop have no active plan!", "user" => $user, "shop" => $shop]);
+				}
+			}
 		} else {
 			return Response()->json(["status" => false, "message" => "Incorrect username or password"]);
 		}
@@ -225,7 +235,13 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => "Shop Mobile Number does not exist!"]);
 		} else {
 
-			return Response()->json(["status" => true, "message" => "Logged in successfully", "shop" => $shop]);
+			if ($shop['status'] == 'Active') {
+
+				return Response()->json(["status" => true, "is_active" => true, "message" => "Logged in successfully", "shop" => $shop]);
+			} else {
+
+				return Response()->json(["status" => true, "is_active" => false, "message" => "Your shop have no active plan!", "shop" => $shop]);
+			}
 		}
 	}
 
@@ -295,7 +311,7 @@ class ApiController extends Controller
 		// $rawDataExploder = explode(";", $profile_photo);
 		// $dataExploder = explode(",", $rawDataExploder[1]);
 		$imageData = base64_decode($profile_photo);
-		$imageFileName = strtolower('img' . Carbon::now()->timestamp . Str::random(4).'.jpg');
+		$imageFileName = strtolower('img' . Carbon::now()->timestamp . Str::random(4) . '.jpg');
 		file_put_contents(public_path() . '/uploads/' . $imageFileName, $imageData) or print_r(error_get_last());
 
 		$fraud = new Fraud();
@@ -353,110 +369,86 @@ class ApiController extends Controller
 
 	public function transactionRegister(Request $request)
 	{
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'user_id' => 'required|exists:users,id',
+				'shop_id' => 'required|exists:shops,id',
+				'dump' => 'required',
+				'status' => 'required'
+			]
+		);
+
+		if ($validator->fails()) {
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
+		}
+
 		// Assigning Arguments to Variables 
-		$shop_id = $request->input('shop_id');
 		$user_id = $request->input('user_id');
+		$shop_id = $request->input('shop_id');
 		$dump = $request->input('dump');
 		$status = $request->input('status');
 
-		$isField = isset($name) && isset($shop_id) && isset($user_id) && isset($dump) && isset($status);
-
-		// Check if any of the required fields are empty!
-
-		if (!$isField) {
-
-			return Response()->json(["status" => false, "message" => "Some fields are required"]);
-		}
-
-		// Check if details are already existed!
-
-		$isShop = Transaction::where('shop_id', $shop_id)->count();
-		$isUser = Transaction::where('user_id', $user_id)->count();
-
-		if ($isShop != 0) {
-
-			return Response()->json(["status" => false, "message" => "Shop Id Already Exists!"]);
-		}
-		if ($isUser != 0) {
-
-			return Response()->json(["status" => false, "message" => "User Id Already Exists!"]);
-		}
-
 		$transaction = new Transaction();
-		$transaction->shop_id = $shop_id ?? '';
-		$transaction->user_id = $user_id ?? '';
-		$transaction->dump = $dump ?? '';
-		$transaction->status = $status ?? '';
+		$transaction->shop_id = $shop_id;
+		$transaction->user_id = $user_id;
+		$transaction->dump = $dump;
+		$transaction->status = $status;
 		$transaction->save();
 
 		$data = [];
 		$data['status'] = true;
 		$data['message'] = 'Success';
-		$data['Transaction'] = $transaction;
+		$data['transaction'] = $transaction;
 
 		return Response()->json($data);
 	}
 
-	//==--==--==--==-- Transaction by subscription_id  --==--==--==--==--==
+	// //==--==--==--==-- Transaction by subscription_id  --==--==--==--==--==
 
-	public function getTransaction(Request $request)
+	// public function getTransaction(Request $request)
 
-	{
-		$subscription_id = $request->input('subscription_id');
-		return  Transaction::where('subscription_id', $subscription_id)->get();
-	}
+	// {
+	// 	$subscription_id = $request->input('subscription_id');
+	// 	return  Transaction::where('subscription_id', $subscription_id)->get();
+
+	// }
 
 	//==--==--==--==-- Subscription Register  --==--==--==--==--==
 
 	public function subscriptionRegister(Request $request)
 
 	{
-		// Assigning Arguments to Variables
 
-		$name = $request->input('name');
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'user_id' => 'required|exists:users,id',
+				'shop_id' => 'required|exists:shops,id',
+				'transaction_id' => 'required|exists:transactions,id',
+				'price' => 'required',
+				'subscription_StartDate' => 'required',
+				'subscription_EndDate' => 'required'
+			]
+		);
+
+		if ($validator->fails()) {
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
+		}
+
+		// Assigning Arguments to Variables
 		$user_id = $request->input('user_id');
 		$shop_id = $request->input('shop_id');
 		$transaction_id = $request->input('transaction_id');
 		$price = $request->input('price');
-		$plans = $request->input('plans');
 		$subscription_StartDate = $request->input('subscription_StartDate');
 		$subscription_EndDate = $request->input('subscription_EndDate');
 
-
-
-		$isField = isset($name) && isset($user_id) && isset($shop_id) && isset($transaction_id) && isset($price) && isset($plans) && isset($subscription_StartDate) && isset($subscription_EndDate);
-
-		// Check if any of the required fields are empty!
-		if (!$isField) {
-			return Response()->json(["status" => false, "message" => "Some fields are Required "]);
-		}
-
-		// Check if details are already existed!
-
-		$isTransaction = Subscription::where('transaction_id', $transaction_id)->count();
-		$isShop = Subscription::where('shop_id', $shop_id)->count();
-		$isUser = Subscription::where('user_id', $user_id)->count();
-
-		if ($isTransaction != 0) {
-
-			return Response()->json(["status" => false, "message" => "Transaction Id Already Exists ! "]);
-		}
-		if ($isShop != 0) {
-
-			return Response()->json(["status" => false, "message" => "Shop Id Already Exists!"]);
-		}
-		if ($isUser != 0) {
-
-			return Response()->json(["status" => false, "message" => "User Id Already Exists!"]);
-		}
-
 		$subscription = new Subscription();
-		$subscription->name = $name;
 		$subscription->user_id = $user_id;
 		$subscription->shop_id = $shop_id;
 		$subscription->transaction_id = $transaction_id;
 		$subscription->price = $price;
-		$subscription->plans = $plans;
 		$subscription->subscription_StartDate = $subscription_StartDate;
 		$subscription->subscription_EndDate = $subscription_EndDate;
 		$subscription->save();
@@ -464,7 +456,7 @@ class ApiController extends Controller
 		$data = [];
 		$data['status']  = true;
 		$data['message'] = 'Success';
-		$data['Subscription'] = $subscription;
+		$data['subscription'] = $subscription;
 
 		return Response()->json($data);
 	}
@@ -533,7 +525,7 @@ class ApiController extends Controller
 		]);
 
 		if ($validator->fails()) {
-			return Response()->json(["status" => false, "message" => "Invalid  shop name and shop address"]);
+			return Response()->json(["status" => false, "message" => "Invalid shop name and shop address"]);
 
 			$shop = new Shop();
 			$shop->update([
@@ -548,8 +540,8 @@ class ApiController extends Controller
 
 	public function shopStatusUpdate(Request $request)
 	{
-		$status = $request->input('status') ?? 'Pending';
-		$id = $request->input('id') ?? 0;
+		$status = $request->input('status');
+		$id = $request->input('shop_id');
 		if ($id > 0) {
 			$shops = Shop::find($id);
 			$shops->status = $status;
@@ -589,22 +581,172 @@ class ApiController extends Controller
 		}
 	}
 
-	// ==--===---===--  Image Upload  ==--===---===---===--===
+	// // ==--===---===--  Image Upload  ==--===---===---===--===
 
-	public function imageUpload(Request $request)
+	// public function imageUpload(Request $request)
+	// {
+	// 	$imageData = $request->input('image_data');
+	// 	$rawDataExploder = explode(";", $imageData);
+	// 	$dataExploder = explode(",", $rawDataExploder[1]);
+	// 	$imageData = base64_decode($dataExploder[1]);
+	// 	$imageFileName = strtolower('simg' . Carbon::now()->timestamp . Str::random(4));
+	// 	file_put_contents(public_path() . $imageFileName . '.jpg', $imageData) or print_r(error_get_last());
+
+	// 	$response['status'] = '01';
+	// 	$response['message'] = 'Success';
+	// 	$response['photo_id'] = $imageFileName;
+
+	// 	return response($response, 200)
+	// 		->header('Content-Type', 'application/json');
+	// }
+
+	// ==--===--==--Multiple images upload===---=====--
+
+	public function multipleImageUpload(Request $request)
 	{
-		$imageData = $request->input('image_data');
-		$rawDataExploder = explode(";", $imageData);
-		$dataExploder = explode(",", $rawDataExploder[1]);
-		$imageData = base64_decode($dataExploder[1]);
-		$imageFileName = strtolower('simg' . Carbon::now()->timestamp . Str::random(4));
-		file_put_contents(public_path() . $imageFileName . '.jpg', $imageData) or print_r(error_get_last());
+		if (!$request->hasFile('fileName')) {
+			return response()->json(['upload_file_not_found'], 400);
+		}
 
-		$response['status'] = '01';
-		$response['message'] = 'Success';
-		$response['photo_id'] = $imageFileName;
+		$allowedfileExtension = ['pdf', 'jpg', 'png'];
+		$files = $request->file('fileName');
+		$errors = [];
 
-		return response($response, 200)
-			->header('Content-Type', 'application/json');
+		foreach ($files as $file) {
+
+			$extension = $file->getClientOriginalExtension();
+
+			$check = in_array($extension, $allowedfileExtension);
+
+			if ($check) {
+				foreach ($request->fileName as $mediaFiles) {
+
+					$path = $mediaFiles->store('public/uploads');
+					$name = $mediaFiles->getClientOriginalName();
+
+					//store image file into directory and db
+					$save = new Image();
+					$save->title = $name;
+					$save->path = $path;
+					$save->save();
+				}
+			} else {
+				return response()->json(['invalid_file_format'], 422);
+			}
+
+			return response()->json(['file_uploaded'], 200);
+		}
+	}
+
+	// ==--==--==--==--==- Initiate Transaction ==--==--==--==--
+
+	public function initiateTransaction(Request $request)
+	{
+
+		$merchantId = $request->input("merchant_id");
+		$merchantKey = $request->input("merchant_key");
+		$orderId = $request->input("order_id");
+		$amount = $request->input("amount");
+		$custId = $request->input("customer_id");
+		$websiteName = $request->input("website");
+		$callbackUrl = $request->input("callback_url");
+
+
+		$paytmParams = array();
+
+		$paytmParams["body"] = array(
+			"requestType" => "Payment",
+			"mid" => $merchantId,
+			"websiteName" => $websiteName,
+			"orderId"  => $orderId,
+			"callbackUrl" => $callbackUrl,
+			"txnAmount" => array(
+				"value" => $amount,
+				"currency" => "INR"
+			),
+			"userInfo" => array(
+				"custId" => $custId
+			)
+		);
+
+		$checksum = PaytmChecksum::generateSignature(json_encode($paytmParams["body"], JSON_UNESCAPED_SLASHES), $merchantKey);
+		$paytmParams["head"] = array(
+			"signature" => $checksum
+		);
+
+		$post_data = json_encode($paytmParams, JSON_UNESCAPED_SLASHES);
+
+
+		/* for Staging */
+		$url = "https://securegw-stage.paytm.in/theia/api/v1/initiateTransaction?mid=$merchantId&orderId=$orderId";
+
+		/* for Production */
+		// $url = "https://securegw.paytm.in/theia/api/v1/initiateTransaction?mid=$merchantId&orderId=$orderId";
+
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+		$response =  json_decode(curl_exec($ch), true);
+
+		if ($response["body"]["resultInfo"]["resultCode"] == "0000") { // 0000 means success
+
+			$txnToken = $response["body"]["txnToken"];
+			return Response()->json(["status" => true, "message" => "TXN Token generated successfully", "txnToken" => $txnToken, "response" => $response]);
+		} else {
+			$message = $response["body"]["resultInfo"]["resultMsg"];
+			return Response()->json(["status" => false, "message" => $message, "response" => $response]);
+		}
+	}
+
+
+	// ==--==--==--==--==- Transaction Status ==--==--==--==--
+
+	public function transactionStatus(Request $request)
+	{
+
+		$merchantId = $request->input("merchant_id");
+		$merchantKey = $request->input("merchant_key");
+		$orderId = $request->input("order_id");
+
+		$paytmParams = array();
+
+
+		$paytmParams["body"] = array(
+			"mid" => $merchantId,
+			"orderId" => $orderId,
+		);
+
+		$checksum = PaytmChecksum::generateSignature(json_encode($paytmParams["body"], JSON_UNESCAPED_SLASHES), $merchantKey);
+
+
+		$paytmParams["head"] = array(
+			"signature"	=> $checksum
+		);
+
+		/* prepare JSON string for request */
+		$post_data = json_encode($paytmParams, JSON_UNESCAPED_SLASHES);
+
+		/* for Staging */
+		$url = "https://securegw-stage.paytm.in/v3/order/status";
+
+		/* for Production */
+		// $url = "https://securegw.paytm.in/v3/order/status";
+
+		$ch = curl_init($url);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+		$response = json_decode(curl_exec($ch), true);
+
+		if ($response["body"]["resultInfo"]["resultCode"] == "01") { // 01 means success
+			$txnId = $response["body"]["txnId"];
+			return Response()->json(["status" => true, "message" => "TXN completed successfully", "txnId" => $txnId, "response" => $response]);
+		} else {
+			$message = $response["body"]["resultInfo"]["resultMsg"];
+			return Response()->json(["status" => false, "message" => $message, "response" => $response]);
+		}
 	}
 }

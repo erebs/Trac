@@ -58,6 +58,9 @@ Route::post('change-password', [ApiController::class, 'changePassword']);
 
 /*************************image upload**************************** */
 
-Route::post('image_upload', [ApiController::class, 'imageUpload']);
+Route::post('multiple-image_upload', [ApiController::class, 'multipleImageUpload']);
 
+/************************* Paytm Gateway **************************** */
 
+Route::post('initiate_transaction', [ApiController::class, 'initiateTransaction']);
+Route::post('transaction_status', [ApiController::class, 'transactionStatus']);

@@ -20,9 +20,9 @@ class CreateFraudsTable extends Migration
             $table->string('mobile_number', 13);
             $table->string('address', 512);
             $table->string('profile_photo', 256);
-            $table->enum('proof_type', ['Aadhaar', 'Pancard', 'Voters-id', 'Licence', 'Passport']);
+            $table->enum('proof_type', ['Aadhaar', 'Pan Card', 'Voter ID', 'Driving Licence', 'Passport']);
             $table->string('proof_number', 32);
-            $table->text('description', 256);
+            $table->text('description');
             $table->string('approved_by', 256)->nullable();
             $table->timestamps();
         });
