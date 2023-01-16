@@ -15,10 +15,10 @@ class CreateImagesTable extends Migration
     {
         Schema::create('images', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('title',100 );
-            $table->string('path', 100);
-            $table->string('photo', 256)->default('');
-            $table->enum('type', ['Profile_photo', 'others'])->default('Profile_photo');
+            $table->integer('fraud_id');
+            $table->integer('shop_id');
+            $table->string('append_url', 100);
+            $table->string('image', );
             $table->timestamps();
         });
     }

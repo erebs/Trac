@@ -309,11 +309,10 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => "Proof Number already exist!"]);
 		}
 
-		// $rawDataExploder = explode(";", $profile_photo);
-		// $dataExploder = explode(",", $rawDataExploder[1]);
+
 		$imageData = base64_decode($profile_photo);
 		$imageFileName = strtolower('img' . Carbon::now()->timestamp . Str::random(4) . '.jpg');
-		file_put_contents(public_path() . '/uploads/' . $imageFileName, $imageData) or print_r(error_get_last());
+		file_put_contents(public_path() . '/uploads/fraud/' . $imageFileName, $imageData) or print_r(error_get_last());
 
 		$fraud = new Fraud();
 		$fraud->shop_id = $shop_id;
@@ -365,6 +364,35 @@ class ApiController extends Controller
 
 		return Response()->json(["status" => true, "message" => 'success', 'frauds' => $frauds]);
 	}
+
+
+		//==--==--==--==-- Fraud Images --==--==--==--==--==
+
+		public function fraudImages(Request $request)
+
+		{
+			$fraudId = $request->input('fraud_id');
+	
+	
+			$validator = Validator::make($request->all(), ['fraud_id' => 'required|exists:frauds,id']);
+	
+			if ($validator->fails()) {
+	
+				return Response()->json(["status" => false, "message" => $validator->errors()]);
+			}
+	
+			$fraudImages = Image::where('fraud_id', $fraudId)->get();
+
+			$images =[];
+
+			foreach ($fraudImages as $image) {
+
+				$images[]=$image['image'];
+
+			}
+	
+			return Response()->json(["status" => true, "message" => 'success', 'images' => $images]);
+		}
 
 	//==--==--==--==-- Transaction Register --==--==--==--==
 
@@ -452,25 +480,19 @@ class ApiController extends Controller
 		return Response()->json($data);
 	}
 
-	//==--==--==--==-- Subscription List  --==--==--==--==--==
+	//==--==--==--==-- Subscription  --==--==--==--==--==
 
-	public function getSubscription(Request $request)
+	public function subscription(Request $request)
 
 	{
 
-		$shop_id = $request->input('shop_id');
-		$user_id = $request->input('user_id');
+		$shopId = $request->input('shop_id');
 
 		$validator = Validator::make(
 			$request->all(),
 
 			[
-				'shop_id' => 'required|exists:subscriptions,shop_id',
-				'user_id' => 'required|exists:subscriptions,user_id'
-			],
-			[
-				'shop_id.unique' => 'shop Id already exists',
-				'user_id.unique' => 'User Id already exists',
+				'shop_id' => 'required|exists:shops,id',
 			]
 		);
 
@@ -479,9 +501,14 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => $validator->errors()]);
 		}
 
-		$subscription = Subscription::where('Shop_id', $shop_id)->get();
+		// Check does Shop have an active plan
+		$subscription = Subscription::where('shop_id', $shopId)->where('subscription_EndDate', '>', Carbon::now())->latest('id')->first();
 
-		return Response()->json(["status" => true, "message" => 'success', 'Subscription' => $subscription]);
+		if (!blank($subscription)) {
+			return Response()->json(["status" => true, "message" => 'success', 'subscription' => $subscription]);
+		} else {
+			return Response()->json(["status" => false, "message" => "Your shop doesn't have an active plan!"]);
+		}
 	}
 
 	//==--===--==--==--==-- User Update  --==--==--==--==--==--==
@@ -541,7 +568,7 @@ class ApiController extends Controller
 			[
 				'shop_id' => 'required|exists:shops,id',
 				'user_id' => 'required|exists:shops,user_id',
-				'status' => ['required', Rule::in(['Active', 'Pending', 'Suspended', 'Deleted'])],
+				'status' => ['required', Rule::in(['Active', 'Pending',  'Suspended', 'Deleted', 'Enable'])],
 			],
 
 		);
@@ -553,6 +580,20 @@ class ApiController extends Controller
 			$shop = Shop::find($shopId);
 
 			if ($shop['user_id'] == $userId) {
+
+
+				// Check does Shop have an active plan
+				if ($status == 'Enable') {
+					$subscription = Subscription::where('shop_id', $shopId)->where('user_id', $userId)->where('subscription_EndDate', '>', Carbon::now())->get();
+
+					if (!blank($subscription)) {
+						$status = 'Active';
+					} else {
+						$status = 'Pending';
+					}
+				}
+
+
 				$shop->status = $status;
 				$shop->save();
 				return Response()->json(["status" => true, "message" => "Shop status updated successfully"]);
@@ -590,60 +631,52 @@ class ApiController extends Controller
 		}
 	}
 
-	// // ==--===---===--  Image Upload  ==--===---===---===--===
 
-	// public function imageUpload(Request $request)
-	// {
-	// 	$imageData = $request->input('image_data');
-	// 	$rawDataExploder = explode(";", $imageData);
-	// 	$dataExploder = explode(",", $rawDataExploder[1]);
-	// 	$imageData = base64_decode($dataExploder[1]);
-	// 	$imageFileName = strtolower('simg' . Carbon::now()->timestamp . Str::random(4));
-	// 	file_put_contents(public_path() . $imageFileName . '.jpg', $imageData) or print_r(error_get_last());
+	// ==--===--==-- Fraud Images Upload ===---=====--
 
-	// 	$response['status'] = '01';
-	// 	$response['message'] = 'Success';
-	// 	$response['photo_id'] = $imageFileName;
-
-	// 	return response($response, 200)
-	// 		->header('Content-Type', 'application/json');
-	// }
-
-	// ==--===--==--Multiple images upload===---=====--
-
-	public function multipleImageUpload(Request $request)
+	public function fraudImagesUpload(Request $request)
 	{
-		if (!$request->hasFile('fileName')) {
-			return response()->json(['upload_file_not_found'], 400);
+		$fraudId = $request->input('fraud_id');
+		$shopId = $request->input('shop_id');
+		$images = $request->input('images');
+
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'fraud_id' => 'required|exists:frauds,id',
+				'shop_id' => 'required|exists:shops,id',
+				'images' => 'required',
+			]
+		);
+
+		if ($validator->fails()) {
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
 		}
 
-		$allowedfileExtension = ['pdf', 'jpg', 'png'];
-		$files = $request->file('fileName');
-		$errors = [];
+		$fraud = Fraud::where('id', $fraudId)->where('shop_id', $shopId)->get();
 
-		foreach ($files as $file) {
+		if (!blank($fraud)) {
 
-			$extension = $file->getClientOriginalExtension();
+			// Loop images and insert one by one
+			foreach ($images as $image) {
 
-			$check = in_array($extension, $allowedfileExtension);
+				$imageData = base64_decode($image);
+				$imageFileName = strtolower('img' . Carbon::now()->timestamp . Str::random(4) . '.jpg');
+				file_put_contents(public_path() . '/uploads/images/' . $imageFileName, $imageData) or print_r(error_get_last());
 
-			if ($check) {
-				foreach ($request->fileName as $mediaFiles) {
 
-					$path = $mediaFiles->store('public/uploads');
-					$name = $mediaFiles->getClientOriginalName();
-
-					//store image file into directory and db
-					$save = new Image();
-					$save->title = $name;
-					$save->path = $path;
-					$save->save();
-				}
-			} else {
-				return response()->json(['invalid_file_format'], 422);
+				$fraud = new Image();
+				$fraud->fraud_id = $fraudId;
+				$fraud->shop_id = $shopId;
+				$fraud->append_url = '/uploads/images/';
+				$fraud->image = $imageFileName;
+				$fraud->save();
 			}
 
-			return response()->json(['file_uploaded'], 200);
+			return Response()->json(["status" => true, "message" => "Images added successfully"]);
+		} else {
+
+			return Response()->json(["status" => false, "message" => "Fraud and Shop doesn't match!"]);
 		}
 	}
 
@@ -708,6 +741,7 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => $message, "response" => $response]);
 		}
 	}
+	
 
 
 	// ==--==--==--==--==- Transaction Status ==--==--==--==--

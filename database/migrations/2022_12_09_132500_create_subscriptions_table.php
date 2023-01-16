@@ -15,9 +15,9 @@ class CreateSubscriptionsTable extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('user_id');
-            $table->string('shop_id');
-            $table->string('transaction_id');
+            $table->integer('user_id');
+            $table->integer('shop_id');
+            $table->integer('transaction_id');
             $table->string('plan', 20)->default('Premium');
             $table->string('price');
             $table->date('subscription_StartDate');

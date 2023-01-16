@@ -39,6 +39,8 @@ Route::post('/shop_update', [ApiController::class, 'shopUpdate']);
 /********************** Fraud ************************************************ */
 
 Route::post('/fraud_create', [ApiController::class, 'fraudCreate']);
+Route::post('/fraud_images_upload', [ApiController::class, 'fraudImagesUpload']);
+Route::post('/fraud_images', [ApiController::class, 'fraudImages']);
 Route::post('/search_fraud', [ApiController::class, 'searchFraud']);
 Route::post('/fruad_by_shop', [ApiController::class, 'fraudsByShop']);
 
@@ -50,15 +52,12 @@ Route::post('/get_transaction', [ApiController::class, 'getTransaction']);
 /*******************  Subscription  ****************************************** */
 
 Route::post('/subscription_register', [ApiController::class, 'subscriptionRegister']);
-Route::post('/get_subscription', [ApiController::class, 'getsubscription']);
+Route::post('/subscription', [ApiController::class, 'subscription']);
 
 /************************ change  User password ************************************************ */
 
 Route::post('change-password', [ApiController::class, 'changePassword']);
 
-/*************************image upload**************************** */
-
-Route::post('multiple-image_upload', [ApiController::class, 'multipleImageUpload']);
 
 /************************* Paytm Gateway **************************** */
 
