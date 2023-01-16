@@ -102,18 +102,18 @@ class ApiController extends Controller
 		}
 	}
 
-	//==--==--==--==-- User Verification --==--==--==--==--==
+	//==--==--==--==-- User Validation --==--==--==--==--==
 
-	public function userVerification(Request $request)
+	public function userValidation(Request $request)
 	{
 		$username = $request->input('username');
 
 		$user = User::where('mobile_number', $username)->orWhere('member_id', $username)->first();
 
 		if (!blank($user)) {
-			return response()->json(["status" => true, 'message' => "User Verified successfully"]);
+			return response()->json(["status" => true, 'message' => "User validated successfully", 'user' => $user]);
 		} else {
-			return response()->json(["status" => false, 'message' => 'Incorrect mobile number or member id']);
+			return response()->json(["status" => false, 'message' => 'Invalid mobile number or member id']);
 		}
 	}
 
@@ -654,12 +654,13 @@ class ApiController extends Controller
 
 		$userId = $request->input('user_id');
 		$password = $request->input('password');
+		$newPassword = $request->input('new_password');
 
 
 		$validator = Validator::make($request->all(), [
 
-			'user_id' => 'required|min:8| max:32',
-			'password' => 'required|min:8| max:32'
+			'user_id' => 'required',
+			'password' => 'required|min:8|max:32'
 		]);
 
 		if ($validator->fails()) {
@@ -668,12 +669,13 @@ class ApiController extends Controller
 		$user = User::find($userId);
 		if (Hash::check($password, $user->password)) {
 			$user->update([
-				'password' => Hash::make($request->password)
+				'password' => bcrypt($newPassword)
 			]);
-
-			return Response()->json(["status" => false, "message" => "Old password doesnt match"]);
-		} else {
 			return Response()->json(["status" => true, "message" => "Password updated successfully"]);
+
+		} else {
+			return Response()->json(["status" => false, "message" => "Incorrect old password. Please try again"]);
+
 		}
 	}
 
