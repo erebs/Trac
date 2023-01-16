@@ -102,6 +102,21 @@ class ApiController extends Controller
 		}
 	}
 
+	//==--==--==--==-- User Verification --==--==--==--==--==
+
+	public function userVerification(Request $request)
+	{
+		$username = $request->input('username');
+
+		$user = User::where('mobile_number', $username)->orWhere('member_id', $username)->first();
+
+		if (!blank($user)) {
+			return response()->json(["status" => true, 'message' => "User Verified successfully"]);
+		} else {
+			return response()->json(["status" => false, 'message' => 'Incorrect mobile number or member id']);
+		}
+	}
+
 	//==--==--==--==-- User Login --==--==--==--==--==
 
 	public function userLogin(Request $request)
@@ -366,33 +381,32 @@ class ApiController extends Controller
 	}
 
 
-		//==--==--==--==-- Fraud Images --==--==--==--==--==
+	//==--==--==--==-- Fraud Images --==--==--==--==--==
 
-		public function fraudImages(Request $request)
+	public function fraudImages(Request $request)
 
-		{
-			$fraudId = $request->input('fraud_id');
-	
-	
-			$validator = Validator::make($request->all(), ['fraud_id' => 'required|exists:frauds,id']);
-	
-			if ($validator->fails()) {
-	
-				return Response()->json(["status" => false, "message" => $validator->errors()]);
-			}
-	
-			$fraudImages = Image::where('fraud_id', $fraudId)->get();
+	{
+		$fraudId = $request->input('fraud_id');
 
-			$images =[];
 
-			foreach ($fraudImages as $image) {
+		$validator = Validator::make($request->all(), ['fraud_id' => 'required|exists:frauds,id']);
 
-				$images[]=$image['image'];
+		if ($validator->fails()) {
 
-			}
-	
-			return Response()->json(["status" => true, "message" => 'success', 'images' => $images]);
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
 		}
+
+		$fraudImages = Image::where('fraud_id', $fraudId)->get();
+
+		$images = [];
+
+		foreach ($fraudImages as $image) {
+
+			$images[] = $image['image'];
+		}
+
+		return Response()->json(["status" => true, "message" => 'success', 'images' => $images]);
+	}
 
 	//==--==--==--==-- Transaction Register --==--==--==--==
 
@@ -603,24 +617,56 @@ class ApiController extends Controller
 		}
 	}
 
-	// ==--==--==--==--==- Change Password ==--==--==--==--
+	// ==--==--==--==--==- Reset Password ==--==--==--==--
 
-	public function updatePassword(Request $request)
+	public function resetPassword(Request $request)
 
 	{
+
+		$mobile_number = $request->input('mobile_number');
+		$password = $request->input('password');
+
+
 		$validator = Validator::make($request->all(), [
-			'old password' => 'required|min:6| max:32',
-			'password' => 'required|min:6| max:32'
+
+			'mobile_number' => 'required|exists:users,mobile_number',
+			'password' => 'required|min:8| max:32'
 		]);
 
 		if ($validator->fails()) {
-			return response()->json(["status" => false, 'errors' => $validator->errors()]);
-		} else {
-			return response()->json(["status" => true, "message" => "Validation Success"]);
+			return response()->json(["status" => false, 'message' => $validator->errors()]);
 		}
+		$user = User::where('mobile_number', $mobile_number)->first();
 
-		$user = $request->user();
-		if (Hash::check($request->old_password, $user->password)) {
+
+		$user->update([
+			'password' => bcrypt($password)
+		]);
+		return Response()->json(["status" => true, "message" => "Password updated successfully"]);
+	}
+
+
+	// ==--==--==--==--==- Change Password ==--==--==--==--
+
+	public function changePassword(Request $request)
+
+	{
+
+		$userId = $request->input('user_id');
+		$password = $request->input('password');
+
+
+		$validator = Validator::make($request->all(), [
+
+			'user_id' => 'required|min:8| max:32',
+			'password' => 'required|min:8| max:32'
+		]);
+
+		if ($validator->fails()) {
+			return response()->json(["status" => false, 'message' => $validator->errors()]);
+		}
+		$user = User::find($userId);
+		if (Hash::check($password, $user->password)) {
 			$user->update([
 				'password' => Hash::make($request->password)
 			]);
@@ -741,7 +787,7 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => $message, "response" => $response]);
 		}
 	}
-	
+
 
 
 	// ==--==--==--==--==- Transaction Status ==--==--==--==--
