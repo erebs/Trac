@@ -327,7 +327,7 @@ class ApiController extends Controller
 
 		$imageData = base64_decode($profile_photo);
 		$imageFileName = strtolower('img' . Carbon::now()->timestamp . Str::random(4) . '.jpg');
-		file_put_contents(public_path() . '/uploads/fraud/' . $imageFileName, $imageData) or print_r(error_get_last());
+		file_put_contents(public_path() . '/uploads/frauds/' . $imageFileName, $imageData) or print_r(error_get_last());
 
 		$fraud = new Fraud();
 		$fraud->shop_id = $shop_id;
