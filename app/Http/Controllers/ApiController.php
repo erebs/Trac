@@ -110,8 +110,18 @@ class ApiController extends Controller
 
 		$user = User::where('mobile_number', $username)->orWhere('member_id', $username)->first();
 
+
+		// Check if User exist
 		if (!blank($user)) {
-			return response()->json(["status" => true, 'message' => "User validated successfully", 'user' => $user]);
+			// Get Shops by User
+			$shops = Shop::where('user_id', $user->id)->get();
+
+			// Check if User have shops
+			if (!blank($shops)) {
+				return response()->json(["status" => true, 'message' => "User validated successfully", 'user' => $user, 'shops' => $shops]);
+			} else {
+				return response()->json(["status" => false, 'message' => "You don't have any shops registered", 'user_id' => $user->id]);
+			}
 		} else {
 			return response()->json(["status" => false, 'message' => 'Invalid mobile number or member id']);
 		}
@@ -182,7 +192,7 @@ class ApiController extends Controller
 		$district = $request->input('district');
 
 
-		$isField = isset($shop_name) && isset($mobile_number) && ($pincode) && ($gst)  && ($constituency) && ($user_id) && ($district);
+		$isField = isset($shop_name) && isset($mobile_number) && ($pincode) && ($constituency) && ($user_id) && ($district);
 
 		// Check if any of the required fields are empty!
 		if (!$isField) {
@@ -210,12 +220,12 @@ class ApiController extends Controller
 		}
 
 		$shop = new Shop();
-		$shop->shop_name = $shop_name ?? '';
-		$shop->user_id = $user_id ?? '';
-		$shop->gst = $gst ?? '';
-		$shop->mobile_number = $mobile_number ?? '';
-		$shop->constituency = $constituency ?? '';
-		$shop->pincode = $pincode ?? '';
+		$shop->shop_name = $shop_name;
+		$shop->user_id = $user_id;
+		$shop->gst = $gst;
+		$shop->mobile_number = $mobile_number;
+		$shop->constituency = $constituency;
+		$shop->pincode = $pincode;
 		$shop->district = $district;
 		$shop->shop_address = $shop_address;
 		$shop->status = $status ?? 'pending';
@@ -672,10 +682,8 @@ class ApiController extends Controller
 				'password' => bcrypt($newPassword)
 			]);
 			return Response()->json(["status" => true, "message" => "Password updated successfully"]);
-
 		} else {
 			return Response()->json(["status" => false, "message" => "Incorrect old password. Please try again"]);
-
 		}
 	}
 
