@@ -120,7 +120,7 @@ class ApiController extends Controller
 			if (!blank($shops)) {
 				return response()->json(["status" => true, 'message' => "User validated successfully", 'user' => $user, 'shops' => $shops]);
 			} else {
-				return response()->json(["status" => false, 'message' => "You don't have any shops registered", 'user_id' => $user->id]);
+				return response()->json(["status" => false, 'message' => "You don't have a registered shop", 'user' => $user]);
 			}
 		} else {
 			return response()->json(["status" => false, 'message' => 'Invalid mobile number or member id']);
@@ -282,7 +282,7 @@ class ApiController extends Controller
 
 		if ($validator->fails()) {
 
-			return Response()->json(["status" => false, "message" => $validator->errors()]);
+			return Response()->json(["status" => false, "message" => $validator->errors()->first()]);
 		}
 
 		$shops = shop::where('user_id', $user_id)->get();
@@ -522,7 +522,7 @@ class ApiController extends Controller
 
 		if ($validator->fails()) {
 
-			return Response()->json(["status" => false, "message" => $validator->errors()]);
+			return Response()->json(["status" => false, "message" => $validator->errors()->first()]);
 		}
 
 		// Check does Shop have an active plan
