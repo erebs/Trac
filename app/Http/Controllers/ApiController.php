@@ -71,6 +71,8 @@ class ApiController extends Controller
 		$user->district = $district;
 		$user->save();
 
+		$user = User::find($user->id);
+
 		$data = [];
 		$data['status'] = true;
 		$data['message'] = 'Success';
@@ -165,6 +167,10 @@ class ApiController extends Controller
 
 				if ($shop['status'] == 'Active') {
 
+					if ($user['is_approved'] == 0) {
+						return Response()->json(["status" => false, "message" => "Member is not approved. Please contact administrator"]);
+					}
+
 					return Response()->json(["status" => true, "is_active" => true, "message" => "Logged in successfully", "user" => $user, "shop" => $shop]);
 				} else {
 
@@ -172,7 +178,6 @@ class ApiController extends Controller
 				}
 			}
 		} else {
-			return Response()->json(["status" => false, "message" => "Incorrect username or password"]);
 		}
 	}
 
@@ -261,6 +266,12 @@ class ApiController extends Controller
 			return Response()->json(["status" => false, "message" => "Shop Mobile Number does not exist!"]);
 		} else {
 
+
+			$user = User::where('id', $shop['user_id'])->first();
+			if ($user['is_approved'] == 0) {
+				return Response()->json(["status" => false, "message" => "Member is not approved. Please contact administrator"]);
+			}
+
 			if ($shop['status'] == 'Active') {
 
 				return Response()->json(["status" => true, "is_active" => true, "message" => "Logged in successfully", "shop" => $shop]);
@@ -288,6 +299,69 @@ class ApiController extends Controller
 		$shops = shop::where('user_id', $user_id)->get();
 
 		return Response()->json(["status" => true, "message" => 'success', 'shops' => $shops]);
+	}
+
+	//==--==--==--===--==-- Users by constituency --==--==--==--==--==
+
+	public function usersByConstituency(Request $request)
+	{
+		$constituency = $request->input('constituency');
+
+
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'user_id' => ['required', 'exists:users,id'],
+				'constituency' => 'required',
+			]
+		);
+
+		if ($validator->fails()) {
+
+			return Response()->json(["status" => false, "message" => $validator->errors()->first()]);
+		}
+
+		$users = User::where('constituency', $constituency)->where('is_president', false)->get();
+
+		return Response()->json(["status" => true, "message" => 'success', 'users' => $users]);
+	}
+
+	// ===--===---===---===- User Approval Update ==--===--==---==
+
+	public function userApprovalUpdate(Request $request)
+	{
+		$userId = $request->input('user_id');
+		$status = $request->input('status');
+
+
+
+		$validator = Validator::make(
+			$request->all(),
+			[
+				'user_id' => 'required|exists:users,id',
+				'status' => 'required|boolean',
+			],
+
+		);
+
+		if ($validator->fails()) {
+			return Response()->json(["status" => false, "message" => $validator->errors()]);
+		} else {
+			$user = User::find($userId);
+
+			if (!blank($user)) {
+				$user->is_approved = $status;
+				$user->save();
+
+				if ($status) {
+					return Response()->json(["status" => true, "message" => "User approved successfully"]);
+				} else {
+					return Response()->json(["status" => true, "message" => "User disapproved successfully"]);
+				}
+			} else {
+				return Response()->json(["status" => false, "message" => "User and Shop doesn't match!"]);
+			}
+		}
 	}
 
 	//==--==--==--==-- Fraud Create --==--==--==--==--==

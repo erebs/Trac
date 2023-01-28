@@ -30,6 +30,8 @@ Route::post('/user_validation', [ApiController::class, 'userValidation']);
 Route::post('/update_profile', [ApiController::class, 'updateProfile']);
 Route::post('/reset_password', [ApiController::class, 'resetPassword']);
 Route::post('/change_password', [ApiController::class, 'changePassword']);
+Route::post('/users_by_constituency', [ApiController::class, 'usersByConstituency']);
+Route::post('/user_approval_update', [ApiController::class, 'userApprovalUpdate']);
 
 /*********************** Shop ************************************************ */
 

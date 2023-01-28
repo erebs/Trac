@@ -15,14 +15,16 @@ class CreateUsersTable extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->increments('id');
-            $table->string('name',32);
+            $table->string('name', 32);
             $table->string('member_id');
-            $table->string('mobile_number','13');
-            $table->string('pincode','6');
-            $table->string('district','32');
-            $table->string('password','100');
-            $table->string('constituency','64');
+            $table->string('mobile_number', '13');
+            $table->string('pincode', '6');
+            $table->string('district', '32');
+            $table->string('password', '100');
+            $table->string('constituency', '64');
             $table->enum('status', ['Active', 'Pending', 'Suspended', 'Deleted'])->default('Pending');
+            $table->boolean('is_approved')->default(false);
+            $table->boolean('is_president')->default(false);
             $table->timestamps();
         });
     }
