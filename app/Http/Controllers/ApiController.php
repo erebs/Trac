@@ -178,6 +178,7 @@ class ApiController extends Controller
 				}
 			}
 		} else {
+			return Response()->json(["status" => false, "message" => "Incorrect username or password"]);
 		}
 	}
 
